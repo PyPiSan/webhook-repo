@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# This is to connect to MongoDB database using Pymong,
+# This is to connect to MongoDB database using Pymongo,
 class MongoConnect:
 
     def __init__(self, data):
@@ -110,7 +110,6 @@ def gitaction():
             return Response({'Status': 'Successfully Inserted'})
         # The objective is to only check for [PUSH, PULL, MERGE], so escaping other response from Github
         else:
-            pass
             return Response({'Status': 'No data to write'})
 
 # The host and post is changed to http://localhost:8000
