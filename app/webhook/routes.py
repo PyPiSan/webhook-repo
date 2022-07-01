@@ -1,48 +1,13 @@
-from flask import Flask, render_template, request, Response
-from pymongo import MongoClient
-import os
+from flask import request, render_template, Blueprint
+from app.extensions import MongoConnect
 
-app = Flask(__name__)
 
-# This is to connect to MongoDB database using Pymong,
-class MongoConnect:
-
-    def __init__(self, data):
-        conn_str = os.environ["CONN_STRING"] #MongoDB connection string stored in env
-        self.client = MongoClient(conn_str)
-        cursor = self.client.Webhook #collecting DB
-        self.collection = cursor.gitresponse #collecting collection
-        self.data = data
-
-# Fetching data from dB, for(GET) method
-    def read(self):
-        documents = self.collection.find()
-        output = [{item: data[item] for item in data if item != '_id'}
-                  for data in documents] # escaping MongoDB default id at the response output
-        return output
-
-# Wrinting to dB, for (POST) method 
-    def write(self, data):
-        # log.info('Writing Data')
-        new_document = data
-        response = self.collection.insert_one(new_document) # using insert_one() method to inset data
-        output = {'Status': 'Successfully Inserted'}
-        return output
-
-# Homepage view, only fetching of data from dB is allowed,
-
-@app.route('/', methods=['GET'])
-def home():
-    if request.method == 'GET': 
-        data = {}
-        obj = MongoConnect(data)
-        response = obj.read()
-        return render_template('home.html', response=response) # Returning response and rendering template
+webhook = Blueprint('webhook', __name__)
 
 # Endpoint for getting POST data from Github
 
-@app.route('/payload', methods=['POST'])
-def gitaction():
+@webhook.route('/receiver', methods=['POST'])
+def receiver():
     if request.headers['content_type'] == 'application/json':
         git_post_data = request.json # POST Data from Github
         # Since POST data from Github is different for commit method hence checking for PUSH request
@@ -65,7 +30,7 @@ def gitaction():
             }
             obj = MongoConnect(data)
             obj.write(data)
-            return Response({'Status': 'Successfully Inserted'})
+            return {}, 200
 
         # checking if it is a PULL request, the data is different from the commit method
         elif git_post_data.get("action") == 'opened':
@@ -86,7 +51,7 @@ def gitaction():
             }
             obj = MongoConnect(data)
             obj.write(data)
-            return Response({'Status': 'Successfully Inserted'})
+            return {}, 200
 
         # when the action is 'closed' it is MERGE request
         elif git_post_data.get("action") == 'synchronize':
@@ -107,12 +72,7 @@ def gitaction():
             }
             obj = MongoConnect(data)
             obj.write(data)
-            return Response({'Status': 'Successfully Inserted'})
+            return {}, 200
         # The objective is to only check for [PUSH, PULL, MERGE], so escaping other response from Github
         else:
-            pass
-            return Response({'Status': 'No data to write'})
-
-# The host and post is changed to http://localhost:8000
-if __name__ == "__main__":
-    app.run(debug=True, port=8000, host='0.0.0.0')
+            return {}, 200
